@@ -15,7 +15,8 @@ from tensorflow.keras.utils import plot_model
 # RESNET Block
 def resblock(inputX, block_num, filters, downsample_block=True):
 
-    
+    # Downsample block
+    # 1st Conv Layer
     if block_num == 0 and downsample_block:
         x = Conv2D(filters=filters, kernel_size=1, strides=2, padding="same")(inputX)
     else:
@@ -23,13 +24,16 @@ def resblock(inputX, block_num, filters, downsample_block=True):
     x = BatchNormalization()(x)
     x = ReLU()(x)
 
+    # 2nd Conv Layer
     x = Conv2D(filters=filters, kernel_size=3, padding="same")(x)
     x = BatchNormalization()(x)
     x = ReLU()(x)
 
+    # 3rd Conv Layer
     x = Conv2D(filters=filters * 4, kernel_size=1, padding="same")(x)
     x = BatchNormalization()(x)
 
+    # Downsampling of Identity Mapping
     if block_num == 0:
         if downsample_block:
             inputX = Conv2D(
@@ -41,43 +45,45 @@ def resblock(inputX, block_num, filters, downsample_block=True):
 
         inputX = BatchNormalization()(inputX)
 
+    # Addition of Identity to Residuals
     x = Add()([inputX, x])
     x = ReLU()(x)
 
     return x
 
 
+# ResNet Model
 def RESNET50():
     # Input
     inputX = Input(shape=(224, 224, 3))
 
-    # First Downsample
-    # output_size 112x112
+    # First Downsample - output_size 112x112
     x = Conv2D(filters=64, kernel_size=7, strides=2, padding="same")(inputX)
     x = BatchNormalization()(x)
     x = ReLU()(x)
     x = MaxPooling2D(pool_size=7, strides=2, padding="same")(x)
 
-    # Block 1
-    # output_size 56x56
+    # Block 1 - output_size 56x56
+    # 3 resblocks
     for i in range(3):
         x = resblock(x, i, filters=64, downsample_block=False)
 
-    # Block 2
-    # output_size 28x28
+    # Block 2 - output_size 28x28
+    # 4 resblocks
     for i in range(4):
         x = resblock(x, i, filters=128)
 
-    # Block 3
-    # output_size 14x14
+    # Block 3 - output_size 14x14
+    # 6 resblocks
     for i in range(6):
         x = resblock(x, i, filters=256)
 
-    # Block 4
-    # output_size 7x7
+    # Block 4 - output_size 7x7
+    # 3 resblocksF
     for i in range(3):
         x = resblock(x, i, filters=512)
 
+    # Classification
     x = GlobalAveragePooling2D()(x)
     x = Dense(units=1000, activation="softmax")(x)
 
